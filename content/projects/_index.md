@@ -1,5 +1,7 @@
 +++
 title = "Projects"
-sort_by = "weight"
-template = "cards.html"
+sort_by = "date"
+paginate_by = 5 
+insert_anchor_links = "right"
+date = "2023-08-09"
 +++

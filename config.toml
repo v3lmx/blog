@@ -5,9 +5,15 @@ base_url = "https://v3lmx.com"
 compile_sass = true
 
 # Whether to build a search index to be used later on by a JavaScript library
-build_search_index = true
+build_search_index = false
 
-theme = "apollo"
+theme = "papermod"
+
+taxonomies = [
+    { name = "tags", feed = true }
+]
+
+author = "v3lmx"
 
 [markdown]
 # Whether to do syntax highlighting
@@ -15,30 +21,34 @@ theme = "apollo"
 highlight_code = true
 
 [extra]
-# Put all your custom variables here
-# icon = "github"
-# name = "GitHub"
-# url = "https://gitlab.com/v3lmx/"
-toc = true
-use_cdn = false
-favicon = "/icon/favicon.png"
-theme = "toggle" # light, dark, auto, toggle
-# mathjax = true
-# mathjax_dollar_inline_enable = true
-
-menu = [
-    { name = "/posts", url = "/posts", weight = 1 },
-    { name = "/projects", url = "/projects", weight = 2 },
-    { name = "/about", url = "/about", weight = 3 },
-]
-
-socials = [
-    { name = "github", url = "https://github.com/v3lmx/", icon = "github" },
-]
-
 custom_css = []
 
-[extra.analytics]
-enabled = false # TODO
-#goatcounter_user = "your_user"
-#goatcounter_host = "example.com"    # default= goatcounter.com
+[extra.papermod]
+title = "v3lmx"
+default_theme = "auto"
+theme = "dark"
+language_direction = "auto"
+keywords = ["v3lmx"]
+show_theme_toggle = true
+show_scroll_to_top = true
+show_code_copy_buttons = true
+show_reading_time = true
+show_word_count = false
+show_post_nav_links = true
+show_post_meta = true
+default_toc_open = false
+edit_post_url = "https://github.com/v3lmx/blog"
+#copyright = ""
+date_format = "%Y-%m-%d"
+navigation = [
+    # { url = "$BASE_URL/archive", title = "Archive" },
+    { url = "$BASE_URL/about/", title = "About" },
+    { url = "$BASE_URL/tags/", title = "Tags" },
+    { url = "https://getzola.org/", title = "Zola", is_external = true }
+]
+
+home_title = "v3lmx"
+home_content = "Software engineer, Rust enthusiast"
+social_icons = [
+    { url = "https://github.com/v3lmx", title = "GitHub", icon = "github" },
+]
