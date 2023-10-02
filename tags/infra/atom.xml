@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title> - infra</title>
+    <link href="https://v3lmx.github.io/blog/tags/infra/atom.xml" rel="self" type="application/atom+xml"/>
+    <link href="https://v3lmx.github.io/blog/"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2023-08-09T00:00:00+00:00</updated>
+    <id>https://v3lmx.github.io/blog/tags/infra/atom.xml</id>
+    <entry xml:lang="en">
+        <title>Setting up a VPS using Portainer, Wireguard, Traefik, and Cloudflare</title>
+        <published>2023-08-09T00:00:00+00:00</published>
+        <updated>2023-08-09T00:00:00+00:00</updated>
+        <author>
+          <name>v3lmx</name>
+        </author>
+        <link rel="alternate" href="https://v3lmx.github.io/blog/posts/vps-setup/" type="text/html"/>
+        <id>https://v3lmx.github.io/blog/posts/vps-setup/</id>
+        
+        <content type="html">&lt;h1 id=&quot;introduction&quot;&gt;Introduction&lt;&#x2F;h1&gt;
+&lt;p&gt;Deploying a website can be a hassle. Having to think about security, scalability, maintenance... There are of course ready-to-use solutions that will work perfectly, but if you&#x27;re like me, and you want to have a more hands on approach, then this article will surely interest you.&lt;&#x2F;p&gt;
+&lt;p&gt;Here&#x27;s how I setup my VPS using &lt;a href=&quot;https:&#x2F;&#x2F;doc.traefik.io&#x2F;traefik&#x2F;&quot;&gt;Traefik&lt;&#x2F;a&gt; reverse proxy, &lt;a href=&quot;https:&#x2F;&#x2F;docs.portainer.io&quot;&gt;Portainer&lt;&#x2F;a&gt;, &lt;a href=&quot;https:&#x2F;&#x2F;www.wireguard.com&quot;&gt;Wireguard&lt;&#x2F;a&gt; and &lt;a href=&quot;https:&#x2F;&#x2F;www.cloudflare.com&#x2F;en-gb&#x2F;&quot;&gt;Cloudflare&lt;&#x2F;a&gt; for deploying my personal projects.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Disclaimer: Some choices I made may not be the best solution for you (or for me 😊). If you&#x27;re looking for perfection or most optimal solutions you should consider researching the concepts presented here further.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h1 id=&quot;overview&quot;&gt;Overview&lt;&#x2F;h1&gt;
+&lt;p&gt;This is what we want :&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;https:&#x2F;&#x2F;v3lmx.github.io&#x2F;blog&#x2F;posts&#x2F;vps-setup&#x2F;.&#x2F;v3lmx-architecture.svg&quot; alt=&quot;architecture-schema&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Any user can get to the Blog and Website&lt;&#x2F;li&gt;
+&lt;li&gt;Only by using the VPN network can you reach the admin services, in this caser Portainer and the traefik dashboard&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Services hosted on the VPS are all inside docker containers. Traefik automatically discovers all available services and routes traffic based on routing rules. Portainer manages containers (stopping, restarting...) and makes information available (status, logs...). The portainer and traefik interfaces are only available on the Admin network.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;technologies&quot;&gt;Technologies&lt;&#x2F;h2&gt;
+&lt;h3 id=&quot;wireguard&quot;&gt;Wireguard&lt;&#x2F;h3&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;www.wireguard.com&quot;&gt;Wireguard&lt;&#x2F;a&gt; is a modern VPN server and client, enabling a simple, fast, and secure tunnel between the client devices and the server. Exposing the management interfaces only on the Admin network greatly reduces the attack surface on the VPS.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;portainer&quot;&gt;Portainer&lt;&#x2F;h3&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;docs.portainer.io&quot;&gt;Portainer&lt;&#x2F;a&gt; exposes a dashboard that makes it easy to manage docker containers running on the machine. &lt;a href=&quot;https:&#x2F;&#x2F;docs.portainer.io&#x2F;start&#x2F;install-ce&#x2F;server&#x2F;docker&#x2F;linux&quot;&gt;Installation&lt;&#x2F;a&gt; is really easy using the &lt;a href=&quot;https:&#x2F;&#x2F;hub.docker.com&#x2F;r&#x2F;portainer&#x2F;portainer-ce&quot;&gt;portainer-ce&lt;&#x2F;a&gt; docker image.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;traefik&quot;&gt;Traefik&lt;&#x2F;h3&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;doc.traefik.io&#x2F;traefik&#x2F;&quot;&gt;Traefik&lt;&#x2F;a&gt; makes it easy to expose any dockerized service to the outside world (and much more than that, but we will limit our scope to this feature for this blog post). Simply adding some tags to a docker container will make it available.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;cloudflare&quot;&gt;Cloudflare&lt;&#x2F;h3&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;www.cloudflare.com&#x2F;en-gb&#x2F;&quot;&gt;Cloudflare&lt;&#x2F;a&gt; handles DNS management (and optionally registration), but with a &lt;strong&gt;lot&lt;&#x2F;strong&gt; of added &lt;a href=&quot;https:&#x2F;&#x2F;www.cloudflare.com&#x2F;en-gb&#x2F;plans&#x2F;free&#x2F;&quot;&gt;free features&lt;&#x2F;a&gt;, such as caching, DDoS protection, SSL certifiacates and much more.&lt;&#x2F;p&gt;
+&lt;h1 id=&quot;configuration&quot;&gt;Configuration&lt;&#x2F;h1&gt;
+&lt;p&gt;Below is all the configuration for those services. The most basic VPS configuration is not discussed here, there are plenty of resources already for that. You should at least secure your &lt;code&gt;ssh&lt;&#x2F;code&gt; configuration and install a firewall.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;wireguard-1&quot;&gt;Wireguard&lt;&#x2F;h2&gt;
+&lt;p&gt;Wireguard setup is pretty straightforward, so I will not go into details. You can find the documentation &lt;a href=&quot;https:&#x2F;&#x2F;www.wireguard.com&#x2F;quickstart&#x2F;&quot;&gt;here&lt;&#x2F;a&gt;. I used &lt;code&gt;10.0.0.0&#x2F;24&lt;&#x2F;code&gt; adresses, you can change that to any private IP range you like.&lt;&#x2F;p&gt;
+&lt;p&gt;Here is my final &lt;strong&gt;server&lt;&#x2F;strong&gt; configuration, in &lt;code&gt;&#x2F;etc&#x2F;wireguard&#x2F;wg0.conf&lt;&#x2F;code&gt; :&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#2b303b;color:#c0c5ce;&quot;&gt;&lt;code&gt;&lt;span&gt;[Interface]
+&lt;&#x2F;span&gt;&lt;span&gt;Address = 10.0.0.1&#x2F;24
+&lt;&#x2F;span&gt;&lt;span&gt;SaveConfig = true
+&lt;&#x2F;span&gt;&lt;span&gt;PostUp = ufw route allow in on &amp;lt;WIREGUARD_INTERFACE&amp;gt; out on &amp;lt;VPS_INTERFACE&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;PostUp = ufw route allow in on &amp;lt;VPS_INTERFACE&amp;gt; out on &amp;lt;WIREGUARD_INTERFACE&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;PreDown = ufw route delete allow in on &amp;lt;WIREGUARD_INTERFACE&amp;gt; out on &amp;lt;VPS_INTERFACE&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;PreDown = ufw route delete allow in on &amp;lt;VPS_INTERFACE&amp;gt; out on &amp;lt;WIREGUARD_INTERFACE&amp;gt;
+&lt;&#x2F;span&gt;&lt;span&gt;ListenPort = 51820
+&lt;&#x2F;span&gt;&lt;span&gt;PrivateKey = aaa...
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;[Peer]
+&lt;&#x2F;span&gt;&lt;span&gt;PublicKey = aaa...
+&lt;&#x2F;span&gt;&lt;span&gt;AllowedIPs = 10.0.0.0&#x2F;24
+&lt;&#x2F;span&gt;&lt;span&gt;Endpoint = &amp;lt;IP&amp;gt;:37891
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;&lt;code&gt;PostUp&lt;&#x2F;code&gt; and &lt;code&gt;PreDown&lt;&#x2F;code&gt; rules enable and disable firewall rules respectively. &lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;These rules are for &lt;code&gt;ufw&lt;&#x2F;code&gt;, they need to be adapted when using another firewall.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;p&gt;The client configuration should look something like this :&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#2b303b;color:#c0c5ce;&quot;&gt;&lt;code&gt;&lt;span&gt;[Interface]
+&lt;&#x2F;span&gt;&lt;span&gt;PrivateKey = aaa...
+&lt;&#x2F;span&gt;&lt;span&gt;Address = 10.0.0.10&#x2F;24
+&lt;&#x2F;span&gt;&lt;span&gt;DNS = 1.1.1.1, 1.0.0.1
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;[Peer]
+&lt;&#x2F;span&gt;&lt;span&gt;PublicKey = aaa...
+&lt;&#x2F;span&gt;&lt;span&gt;AllowedIPs = 10.0.0.0&#x2F;24
+&lt;&#x2F;span&gt;&lt;span&gt;Endpoint = &amp;lt;VPS_IP_ADRESS&amp;gt;:51820
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;traefik-1&quot;&gt;Traefik&lt;&#x2F;h2&gt;
+&lt;h3 id=&quot;configuration-discovery&quot;&gt;Configuration discovery&lt;&#x2F;h3&gt;
+&lt;p&gt;The traefik configuration is split in several places :&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;the &lt;code&gt;static&lt;&#x2F;code&gt; configuration : in a file usually called &lt;code&gt;traefik.yml&lt;&#x2F;code&gt;, this file contains configuration relative to endpoints, providers, SSL, etc.&lt;&#x2F;li&gt;
+&lt;li&gt;the &lt;code&gt;dynamic&lt;&#x2F;code&gt; configuration : contains configuration relative to TLS, routers, etc.&lt;&#x2F;li&gt;
+&lt;li&gt;docker tags : traefik reads all docker tags to discover services from running containers, and get some configuration about itself&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;You can read more about traefik configuration discovery &lt;a href=&quot;https:&#x2F;&#x2F;doc.traefik.io&#x2F;traefik&#x2F;providers&#x2F;overview&#x2F;&quot;&gt;here&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;target&quot;&gt;Target&lt;&#x2F;h3&gt;
+&lt;p&gt;Using these configuration sources, here is what we want to achieve :&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;make all services available from the outside world and automatically discoverable&lt;&#x2F;li&gt;
+&lt;li&gt;make the traefik dashboard available only from our VPN network&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Below are the configurations needed ot achieve this target.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;static-configuration&quot;&gt;Static configuration&lt;&#x2F;h3&gt;
+&lt;p&gt;In &lt;code&gt;&#x2F;etc&#x2F;traefik&#x2F;traefik.yml&lt;&#x2F;code&gt; :&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;yml&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-yml &quot;&gt;&lt;code class=&quot;language-yml&quot; data-lang=&quot;yml&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;entryPoints&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;https&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;address&lt;&#x2F;span&gt;&lt;span&gt;: &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;:443&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;providers&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;file&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;watch&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;filename&lt;&#x2F;span&gt;&lt;span&gt;: &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;&#x2F;etc&#x2F;traefik&#x2F;config.yml&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;docker&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;watch&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;exposedByDefault&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;false
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;api&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;dashboard&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;# enable the dashboard
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;accessLog&lt;&#x2F;span&gt;&lt;span&gt;: {} &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;# enable access logs
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;entryPoints&lt;&#x2F;code&gt; defines the inputs : we only want HTTPS traffic, so we only enable 443&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;providers&lt;&#x2F;code&gt; lists the configurations to load : we include the dynamic configuration and the docker provider &lt;&#x2F;li&gt;
+&lt;li&gt;note that the &lt;code&gt;insecure&lt;&#x2F;code&gt; option on &lt;code&gt;api&lt;&#x2F;code&gt; is not set (defaults to false)&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;dynamic-configuration&quot;&gt;Dynamic configuration&lt;&#x2F;h3&gt;
+&lt;p&gt;In this file we enable routing for the traefik dashboard. Using the &lt;code&gt;ClientIP&lt;&#x2F;code&gt; routing rule, all clients coming from inside the VPN network will be able to access the dashboard. We also add a &lt;code&gt;basicAuth&lt;&#x2F;code&gt; middleware for added security, that will prompt for username and password when a user attemps to access the daashboard.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;yml&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-yml &quot;&gt;&lt;code class=&quot;language-yml&quot; data-lang=&quot;yml&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;http&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;routers&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;dashboard&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;rule&lt;&#x2F;span&gt;&lt;span&gt;: &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;ClientIP(`10.0.0.0&#x2F;24`)&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;service&lt;&#x2F;span&gt;&lt;span&gt;: &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;api@internal&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;tls&lt;&#x2F;span&gt;&lt;span&gt;: {}
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;middlewares&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;        - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;auth
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;middlewares&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;auth&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;basicAuth&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;users&lt;&#x2F;span&gt;&lt;span&gt;: &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;username:$2y$...&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;To get the password hash with the correct format, use &lt;a href=&quot;https:&#x2F;&#x2F;httpd.apache.org&#x2F;docs&#x2F;2.4&#x2F;programs&#x2F;htpasswd.html&quot;&gt;&lt;code&gt;htpasswd&lt;&#x2F;code&gt;&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h3 id=&quot;docker-compose-yml&quot;&gt;docker-compose.yml&lt;&#x2F;h3&gt;
+&lt;p&gt;Here is the docker compose file to launch traefik.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;yml&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-yml &quot;&gt;&lt;code class=&quot;language-yml&quot; data-lang=&quot;yml&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;version&lt;&#x2F;span&gt;&lt;span&gt;: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;3&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;services&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;reverse-proxy&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;# The official v2 Traefik docker image
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;image&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;traefik:v2.9
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;# Enables the web UI and tells Traefik to listen to docker
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;ports&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;# The HTTP port
+&lt;&#x2F;span&gt;&lt;span&gt;      - &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;443:443&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;labels&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;traefik.enable&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;traefik.http.routers.traefik.entryPoints&lt;&#x2F;span&gt;&lt;span&gt;: &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;https&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;traefik.http.routers.traefik.tls&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;restart&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;always
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;volumes&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;# So that Traefik can listen to the Docker events
+&lt;&#x2F;span&gt;&lt;span&gt;      - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;&#x2F;var&#x2F;run&#x2F;docker.sock:&#x2F;var&#x2F;run&#x2F;docker.sock
+&lt;&#x2F;span&gt;&lt;span&gt;      - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;&#x2F;etc&#x2F;traefik&#x2F;traefik.yml:&#x2F;etc&#x2F;traefik&#x2F;traefik.yml:ro
+&lt;&#x2F;span&gt;&lt;span&gt;      - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;&#x2F;etc&#x2F;traefik&#x2F;config.yml:&#x2F;etc&#x2F;traefik&#x2F;config.yml:ro
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The labels are used by the traefik docker provider. Because we disabled the &lt;code&gt;exposedByDefault&lt;&#x2F;code&gt; option, we need to enable traefik manually for all containers that need to be seen.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;example-service-docker-compose-yml&quot;&gt;Example service docker-compose.yml&lt;&#x2F;h3&gt;
+&lt;p&gt;Here is an example of a of a simple &lt;code&gt;docker-compose.yml&lt;&#x2F;code&gt; for a static website behind an nginx web server :&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;yml&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-yml &quot;&gt;&lt;code class=&quot;language-yml&quot; data-lang=&quot;yml&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;version&lt;&#x2F;span&gt;&lt;span&gt;: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;3.5&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;services&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;example-service&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;build&lt;&#x2F;span&gt;&lt;span&gt;: &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;&#x2F;path&#x2F;to&#x2F;docker-compose-dir&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;container_name&lt;&#x2F;span&gt;&lt;span&gt;: &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;example-container&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;networks&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;      - &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;traefik&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;labels&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;traefik.enable&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;traefik.http.routers.example-router.rule&lt;&#x2F;span&gt;&lt;span&gt;: &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;Host(`example.com`)&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;traefik.http.routers.example-router.tls&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true
+&lt;&#x2F;span&gt;&lt;span&gt;      &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;traefik.http.services.example-service.loadbalancer.server.port&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;8080
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;networks&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;traefik&lt;&#x2F;span&gt;&lt;span&gt;:
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;name&lt;&#x2F;span&gt;&lt;span&gt;: &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;traefik_default&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;external&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;true
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This example uses the &lt;code&gt;traefik_default&lt;&#x2F;code&gt; network, make sure to use the same network as your &lt;code&gt;traefik&lt;&#x2F;code&gt; container.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;cloudflare-1&quot;&gt;Cloudflare&lt;&#x2F;h2&gt;
+&lt;p&gt;Cloudflare handles DNS and certificates for us. You will need to sign up for a free account, and enable Cloudflare for your website.&lt;&#x2F;p&gt;
+&lt;p&gt;Setup your DNS records, and set the SSL&#x2F;TLS encryption mode to &amp;quot;Full&amp;quot;, and that&#x27;s it! You can check out all the other features, especially Security and tweak to your liking.&lt;&#x2F;p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;If you don&#x27;t want to use Cloudflare, you can of course use any DNS regstrar you like, but certificates management can get a little complicated depending on API access possibility. Traefik can handle ACME automatic certificate renewal, but some features (like DNS challenge) require API access to the DNS provider, and that is not always a possibility. You can check out the compatibility list &lt;a href=&quot;https:&#x2F;&#x2F;go-acme.github.io&#x2F;lego&#x2F;dns&#x2F;&quot;&gt;here&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;&#x2F;blockquote&gt;
+&lt;h1 id=&quot;conclusion&quot;&gt;Conclusion&lt;&#x2F;h1&gt;
+&lt;p&gt;Hopefully this was helpful to you! Thank you for reading, I hope you have fun building stuff :).&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+</feed>

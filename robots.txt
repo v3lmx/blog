@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+Allow: /
+Sitemap: https://v3lmx.github.io/blog/sitemap.xml

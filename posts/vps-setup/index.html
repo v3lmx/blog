@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+<head>
+    
+    <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Setting up a VPS using Portainer, Wireguard, Traefik, and Cloudflare</title>
+
+
+<meta name="keywords" content="v3lmx">
+
+
+
+<meta name="description" content="">
+
+
+
+<meta name="author" content="v3lmx">
+
+
+<link rel="canonical" href="https:&#x2F;&#x2F;v3lmx.github.io&#x2F;blog&#x2F;posts&#x2F;vps-setup&#x2F;">
+
+
+<link rel="stylesheet" href="https://v3lmx.github.io/blog/css/includes/scroll-bar.css">
+<link rel="stylesheet" href="https://v3lmx.github.io/blog/css/styles.css">
+<link rel="stylesheet" href="https://v3lmx.github.io/blog/css/override.css">
+
+
+
+
+
+
+
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+    </style>
+    
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+    
+</noscript>
+
+
+
+    
+</head>
+<body class=" dark" id="top">
+    
+    
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https:&#x2F;&#x2F;v3lmx.github.io&#x2F;blog&#x2F;" accesskey="h" title="v3lmx (Alt + H)">
+                v3lmx
+            </a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+                <ul class="lang-switch">
+                    <li></li>
+                </ul>
+            </div>
+        </div>
+        
+        <ul id="menu">
+            
+            
+            
+            <li>
+                <a href="https:&#x2F;&#x2F;v3lmx.github.io&#x2F;blog&#x2F;&#x2F;about&#x2F;" title="About">
+                    <span>About</span>
+                    
+                </a>
+            </li>
+            
+            
+            
+            <li>
+                <a href="https:&#x2F;&#x2F;v3lmx.github.io&#x2F;blog&#x2F;&#x2F;tags&#x2F;" title="Tags">
+                    <span>Tags</span>
+                    
+                </a>
+            </li>
+            
+            
+            
+            <li>
+                <a href="https:&#x2F;&#x2F;getzola.org&#x2F;" title="Zola">
+                    <span>Zola</span>
+                    
+                    <svg fill="none" shape-rendering="geometricPrecision" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewBox="0 0 24 24" height="12" width="12">
+                        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path>
+                        <path d="M15 3h6v6"></path>
+                        <path d="M10 14L21 3"></path>
+                    </svg>
+                    
+                </a>
+            </li>
+            
+        </ul>
+        
+    </nav>
+</header>
+
+    
+    <main class="main">
+        
+<article class="post-single">
+  <header class="post-header">
+      <div class="breadcrumbs">
+          <a href="https:&#x2F;&#x2F;v3lmx.github.io&#x2F;blog&#x2F;">Home</a>&nbsp;»&nbsp;
+          <a href="https://v3lmx.github.io/blog/posts/">Posts</a>&nbsp;»&nbsp;
+          <a href="https:&#x2F;&#x2F;v3lmx.github.io&#x2F;blog&#x2F;posts&#x2F;vps-setup&#x2F;">Setting up a VPS using Portainer, Wireguard, Traefik, and Cloudflare</a>
+      </div>
+      <h1 class="post-title">Setting up a VPS using Portainer, Wireguard, Traefik, and Cloudflare</h1>
+      
+      
+      <div class="post-meta">
+      
+
+
+
+
+
+
+
+
+
+
+
+
+<span title="2023-08-09 00:00:00 +0000">2023-08-09</span>&nbsp;·&nbsp;6 min&nbsp;·&nbsp;v3lmx
+
+      &nbsp;|&nbsp;<a href="https:&#x2F;&#x2F;github.com&#x2F;v3lmx&#x2F;blog/content/posts&#x2F;vps-setup&#x2F;index.md" rel="noopener noreferrer" target="_blank">Suggest Changes</a>
+
+      </div>
+      
+  </header>
+
+  
+  
+
+<div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner">
+            <ul>
+                
+                <li>
+                    <a href="#introduction" aria-label="Introduction">Introduction</a>
+                    
+                </li>
+                
+                <li>
+                    <a href="#overview" aria-label="Overview">Overview</a>
+                    
+                    <ul>
+                    
+                        <li>
+                            <a href="#technologies" aria-label="Technologies">Technologies</a>
+                            
+                            <ul>
+                                
+                                <li><a href="#wireguard" aria-label="Wireguard">Wireguard</a></li>
+                                
+                                <li><a href="#portainer" aria-label="Portainer">Portainer</a></li>
+                                
+                                <li><a href="#traefik" aria-label="Traefik">Traefik</a></li>
+                                
+                                <li><a href="#cloudflare" aria-label="Cloudflare">Cloudflare</a></li>
+                                
+                            </ul>
+                            
+                        </li>
+                    
+                    </ul>
+                    
+                </li>
+                
+                <li>
+                    <a href="#configuration" aria-label="Configuration">Configuration</a>
+                    
+                    <ul>
+                    
+                        <li>
+                            <a href="#wireguard-1" aria-label="Wireguard">Wireguard</a>
+                            
+                        </li>
+                    
+                        <li>
+                            <a href="#traefik-1" aria-label="Traefik">Traefik</a>
+                            
+                            <ul>
+                                
+                                <li><a href="#configuration-discovery" aria-label="Configuration discovery">Configuration discovery</a></li>
+                                
+                                <li><a href="#target" aria-label="Target">Target</a></li>
+                                
+                                <li><a href="#static-configuration" aria-label="Static configuration">Static configuration</a></li>
+                                
+                                <li><a href="#dynamic-configuration" aria-label="Dynamic configuration">Dynamic configuration</a></li>
+                                
+                                <li><a href="#docker-compose-yml" aria-label="docker-compose.yml">docker-compose.yml</a></li>
+                                
+                                <li><a href="#example-service-docker-compose-yml" aria-label="Example service docker-compose.yml">Example service docker-compose.yml</a></li>
+                                
+                            </ul>
+                            
+                        </li>
+                    
+                        <li>
+                            <a href="#cloudflare-1" aria-label="Cloudflare">Cloudflare</a>
+                            
+                        </li>
+                    
+                    </ul>
+                    
+                </li>
+                
+                <li>
+                    <a href="#conclusion" aria-label="Conclusion">Conclusion</a>
+                    
+                </li>
+                
+            </ul>
+        </div>
+    </details>
+</div>
+
+
+  
+
+  
+  <div class="post-content">
+      <h1 id="introduction">Introduction</h1>
+<p>Deploying a website can be a hassle. Having to think about security, scalability, maintenance... There are of course ready-to-use solutions that will work perfectly, but if you're like me, and you want to have a more hands on approach, then this article will surely interest you.</p>
+<p>Here's how I setup my VPS using <a href="https://doc.traefik.io/traefik/">Traefik</a> reverse proxy, <a href="https://docs.portainer.io">Portainer</a>, <a href="https://www.wireguard.com">Wireguard</a> and <a href="https://www.cloudflare.com/en-gb/">Cloudflare</a> for deploying my personal projects.</p>
+<blockquote>
+<p>Disclaimer: Some choices I made may not be the best solution for you (or for me 😊). If you're looking for perfection or most optimal solutions you should consider researching the concepts presented here further.</p>
+</blockquote>
+<h1 id="overview">Overview</h1>
+<p>This is what we want :</p>
+<p><img src="https://v3lmx.github.io/blog/posts/vps-setup/./v3lmx-architecture.svg" alt="architecture-schema" /></p>
+<ul>
+<li>Any user can get to the Blog and Website</li>
+<li>Only by using the VPN network can you reach the admin services, in this caser Portainer and the traefik dashboard</li>
+</ul>
+<p>Services hosted on the VPS are all inside docker containers. Traefik automatically discovers all available services and routes traffic based on routing rules. Portainer manages containers (stopping, restarting...) and makes information available (status, logs...). The portainer and traefik interfaces are only available on the Admin network.</p>
+<h2 id="technologies">Technologies</h2>
+<h3 id="wireguard">Wireguard</h3>
+<p><a href="https://www.wireguard.com">Wireguard</a> is a modern VPN server and client, enabling a simple, fast, and secure tunnel between the client devices and the server. Exposing the management interfaces only on the Admin network greatly reduces the attack surface on the VPS.</p>
+<h3 id="portainer">Portainer</h3>
+<p><a href="https://docs.portainer.io">Portainer</a> exposes a dashboard that makes it easy to manage docker containers running on the machine. <a href="https://docs.portainer.io/start/install-ce/server/docker/linux">Installation</a> is really easy using the <a href="https://hub.docker.com/r/portainer/portainer-ce">portainer-ce</a> docker image.</p>
+<h3 id="traefik">Traefik</h3>
+<p><a href="https://doc.traefik.io/traefik/">Traefik</a> makes it easy to expose any dockerized service to the outside world (and much more than that, but we will limit our scope to this feature for this blog post). Simply adding some tags to a docker container will make it available.</p>
+<h3 id="cloudflare">Cloudflare</h3>
+<p><a href="https://www.cloudflare.com/en-gb/">Cloudflare</a> handles DNS management (and optionally registration), but with a <strong>lot</strong> of added <a href="https://www.cloudflare.com/en-gb/plans/free/">free features</a>, such as caching, DDoS protection, SSL certifiacates and much more.</p>
+<h1 id="configuration">Configuration</h1>
+<p>Below is all the configuration for those services. The most basic VPS configuration is not discussed here, there are plenty of resources already for that. You should at least secure your <code>ssh</code> configuration and install a firewall.</p>
+<h2 id="wireguard-1">Wireguard</h2>
+<p>Wireguard setup is pretty straightforward, so I will not go into details. You can find the documentation <a href="https://www.wireguard.com/quickstart/">here</a>. I used <code>10.0.0.0/24</code> adresses, you can change that to any private IP range you like.</p>
+<p>Here is my final <strong>server</strong> configuration, in <code>/etc/wireguard/wg0.conf</code> :</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[Interface]
+</span><span>Address = 10.0.0.1/24
+</span><span>SaveConfig = true
+</span><span>PostUp = ufw route allow in on &lt;WIREGUARD_INTERFACE&gt; out on &lt;VPS_INTERFACE&gt;
+</span><span>PostUp = ufw route allow in on &lt;VPS_INTERFACE&gt; out on &lt;WIREGUARD_INTERFACE&gt;
+</span><span>PreDown = ufw route delete allow in on &lt;WIREGUARD_INTERFACE&gt; out on &lt;VPS_INTERFACE&gt;
+</span><span>PreDown = ufw route delete allow in on &lt;VPS_INTERFACE&gt; out on &lt;WIREGUARD_INTERFACE&gt;
+</span><span>ListenPort = 51820
+</span><span>PrivateKey = aaa...
+</span><span>
+</span><span>[Peer]
+</span><span>PublicKey = aaa...
+</span><span>AllowedIPs = 10.0.0.0/24
+</span><span>Endpoint = &lt;IP&gt;:37891
+</span></code></pre>
+<p><code>PostUp</code> and <code>PreDown</code> rules enable and disable firewall rules respectively. </p>
+<blockquote>
+<p>These rules are for <code>ufw</code>, they need to be adapted when using another firewall.</p>
+</blockquote>
+<p>The client configuration should look something like this :</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[Interface]
+</span><span>PrivateKey = aaa...
+</span><span>Address = 10.0.0.10/24
+</span><span>DNS = 1.1.1.1, 1.0.0.1
+</span><span>
+</span><span>[Peer]
+</span><span>PublicKey = aaa...
+</span><span>AllowedIPs = 10.0.0.0/24
+</span><span>Endpoint = &lt;VPS_IP_ADRESS&gt;:51820
+</span></code></pre>
+<h2 id="traefik-1">Traefik</h2>
+<h3 id="configuration-discovery">Configuration discovery</h3>
+<p>The traefik configuration is split in several places :</p>
+<ul>
+<li>the <code>static</code> configuration : in a file usually called <code>traefik.yml</code>, this file contains configuration relative to endpoints, providers, SSL, etc.</li>
+<li>the <code>dynamic</code> configuration : contains configuration relative to TLS, routers, etc.</li>
+<li>docker tags : traefik reads all docker tags to discover services from running containers, and get some configuration about itself</li>
+</ul>
+<p>You can read more about traefik configuration discovery <a href="https://doc.traefik.io/traefik/providers/overview/">here</a>.</p>
+<h3 id="target">Target</h3>
+<p>Using these configuration sources, here is what we want to achieve :</p>
+<ul>
+<li>make all services available from the outside world and automatically discoverable</li>
+<li>make the traefik dashboard available only from our VPN network</li>
+</ul>
+<p>Below are the configurations needed ot achieve this target.</p>
+<h3 id="static-configuration">Static configuration</h3>
+<p>In <code>/etc/traefik/traefik.yml</code> :</p>
+<pre data-lang="yml" style="background-color:#2b303b;color:#c0c5ce;" class="language-yml "><code class="language-yml" data-lang="yml"><span style="color:#bf616a;">entryPoints</span><span>:
+</span><span>  </span><span style="color:#bf616a;">https</span><span>:
+</span><span>    </span><span style="color:#bf616a;">address</span><span>: &quot;</span><span style="color:#a3be8c;">:443</span><span>&quot;
+</span><span>
+</span><span style="color:#bf616a;">providers</span><span>:
+</span><span>  </span><span style="color:#bf616a;">file</span><span>:
+</span><span>    </span><span style="color:#bf616a;">watch</span><span>:
+</span><span>    </span><span style="color:#bf616a;">filename</span><span>: &quot;</span><span style="color:#a3be8c;">/etc/traefik/config.yml</span><span>&quot;
+</span><span>  </span><span style="color:#bf616a;">docker</span><span>:
+</span><span>    </span><span style="color:#bf616a;">watch</span><span>: </span><span style="color:#d08770;">true
+</span><span>    </span><span style="color:#bf616a;">exposedByDefault</span><span>: </span><span style="color:#d08770;">false
+</span><span>
+</span><span style="color:#bf616a;">api</span><span>:
+</span><span>  </span><span style="color:#bf616a;">dashboard</span><span>: </span><span style="color:#d08770;">true </span><span style="color:#65737e;"># enable the dashboard
+</span><span>
+</span><span style="color:#bf616a;">accessLog</span><span>: {} </span><span style="color:#65737e;"># enable access logs
+</span></code></pre>
+<ul>
+<li><code>entryPoints</code> defines the inputs : we only want HTTPS traffic, so we only enable 443</li>
+<li><code>providers</code> lists the configurations to load : we include the dynamic configuration and the docker provider </li>
+<li>note that the <code>insecure</code> option on <code>api</code> is not set (defaults to false)</li>
+</ul>
+<h3 id="dynamic-configuration">Dynamic configuration</h3>
+<p>In this file we enable routing for the traefik dashboard. Using the <code>ClientIP</code> routing rule, all clients coming from inside the VPN network will be able to access the dashboard. We also add a <code>basicAuth</code> middleware for added security, that will prompt for username and password when a user attemps to access the daashboard.</p>
+<pre data-lang="yml" style="background-color:#2b303b;color:#c0c5ce;" class="language-yml "><code class="language-yml" data-lang="yml"><span style="color:#bf616a;">http</span><span>:
+</span><span>  </span><span style="color:#bf616a;">routers</span><span>:
+</span><span>    </span><span style="color:#bf616a;">dashboard</span><span>:
+</span><span>      </span><span style="color:#bf616a;">rule</span><span>: &quot;</span><span style="color:#a3be8c;">ClientIP(`10.0.0.0/24`)</span><span>&quot;
+</span><span>      </span><span style="color:#bf616a;">service</span><span>: &quot;</span><span style="color:#a3be8c;">api@internal</span><span>&quot;
+</span><span>      </span><span style="color:#bf616a;">tls</span><span>: {}
+</span><span>      </span><span style="color:#bf616a;">middlewares</span><span>:
+</span><span>        - </span><span style="color:#a3be8c;">auth
+</span><span>  </span><span style="color:#bf616a;">middlewares</span><span>:
+</span><span>    </span><span style="color:#bf616a;">auth</span><span>:
+</span><span>      </span><span style="color:#bf616a;">basicAuth</span><span>:
+</span><span>        </span><span style="color:#bf616a;">users</span><span>: &quot;</span><span style="color:#a3be8c;">username:$2y$...</span><span>&quot;
+</span></code></pre>
+<blockquote>
+<p>To get the password hash with the correct format, use <a href="https://httpd.apache.org/docs/2.4/programs/htpasswd.html"><code>htpasswd</code></a>.</p>
+</blockquote>
+<h3 id="docker-compose-yml">docker-compose.yml</h3>
+<p>Here is the docker compose file to launch traefik.</p>
+<pre data-lang="yml" style="background-color:#2b303b;color:#c0c5ce;" class="language-yml "><code class="language-yml" data-lang="yml"><span style="color:#bf616a;">version</span><span>: &#39;</span><span style="color:#a3be8c;">3</span><span>&#39;
+</span><span>
+</span><span style="color:#bf616a;">services</span><span>:
+</span><span>  </span><span style="color:#bf616a;">reverse-proxy</span><span>:
+</span><span>    </span><span style="color:#65737e;"># The official v2 Traefik docker image
+</span><span>    </span><span style="color:#bf616a;">image</span><span>: </span><span style="color:#a3be8c;">traefik:v2.9
+</span><span>    </span><span style="color:#65737e;"># Enables the web UI and tells Traefik to listen to docker
+</span><span>    </span><span style="color:#bf616a;">ports</span><span>:
+</span><span>      </span><span style="color:#65737e;"># The HTTP port
+</span><span>      - &quot;</span><span style="color:#a3be8c;">443:443</span><span>&quot;
+</span><span>    </span><span style="color:#bf616a;">labels</span><span>:
+</span><span>      </span><span style="color:#bf616a;">traefik.enable</span><span>: </span><span style="color:#d08770;">true
+</span><span>      </span><span style="color:#bf616a;">traefik.http.routers.traefik.entryPoints</span><span>: &quot;</span><span style="color:#a3be8c;">https</span><span>&quot;
+</span><span>      </span><span style="color:#bf616a;">traefik.http.routers.traefik.tls</span><span>: </span><span style="color:#d08770;">true
+</span><span>    </span><span style="color:#bf616a;">restart</span><span>: </span><span style="color:#a3be8c;">always
+</span><span>    </span><span style="color:#bf616a;">volumes</span><span>:
+</span><span>      </span><span style="color:#65737e;"># So that Traefik can listen to the Docker events
+</span><span>      - </span><span style="color:#a3be8c;">/var/run/docker.sock:/var/run/docker.sock
+</span><span>      - </span><span style="color:#a3be8c;">/etc/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+</span><span>      - </span><span style="color:#a3be8c;">/etc/traefik/config.yml:/etc/traefik/config.yml:ro
+</span></code></pre>
+<p>The labels are used by the traefik docker provider. Because we disabled the <code>exposedByDefault</code> option, we need to enable traefik manually for all containers that need to be seen.</p>
+<h3 id="example-service-docker-compose-yml">Example service docker-compose.yml</h3>
+<p>Here is an example of a of a simple <code>docker-compose.yml</code> for a static website behind an nginx web server :</p>
+<pre data-lang="yml" style="background-color:#2b303b;color:#c0c5ce;" class="language-yml "><code class="language-yml" data-lang="yml"><span style="color:#bf616a;">version</span><span>: &#39;</span><span style="color:#a3be8c;">3.5</span><span>&#39;
+</span><span>
+</span><span style="color:#bf616a;">services</span><span>:
+</span><span>  </span><span style="color:#bf616a;">example-service</span><span>:
+</span><span>    </span><span style="color:#bf616a;">build</span><span>: &quot;</span><span style="color:#a3be8c;">/path/to/docker-compose-dir</span><span>&quot;
+</span><span>    </span><span style="color:#bf616a;">container_name</span><span>: &quot;</span><span style="color:#a3be8c;">example-container</span><span>&quot;
+</span><span>    </span><span style="color:#bf616a;">networks</span><span>:
+</span><span>      - &quot;</span><span style="color:#a3be8c;">traefik</span><span>&quot;
+</span><span>    </span><span style="color:#bf616a;">labels</span><span>:
+</span><span>      </span><span style="color:#bf616a;">traefik.enable</span><span>: </span><span style="color:#d08770;">true
+</span><span>      </span><span style="color:#bf616a;">traefik.http.routers.example-router.rule</span><span>: &quot;</span><span style="color:#a3be8c;">Host(`example.com`)</span><span>&quot;
+</span><span>      </span><span style="color:#bf616a;">traefik.http.routers.example-router.tls</span><span>: </span><span style="color:#d08770;">true
+</span><span>      </span><span style="color:#bf616a;">traefik.http.services.example-service.loadbalancer.server.port</span><span>: </span><span style="color:#d08770;">8080
+</span><span>
+</span><span style="color:#bf616a;">networks</span><span>:
+</span><span>  </span><span style="color:#bf616a;">traefik</span><span>:
+</span><span>    </span><span style="color:#bf616a;">name</span><span>: &quot;</span><span style="color:#a3be8c;">traefik_default</span><span>&quot;
+</span><span>    </span><span style="color:#bf616a;">external</span><span>: </span><span style="color:#d08770;">true
+</span></code></pre>
+<p>This example uses the <code>traefik_default</code> network, make sure to use the same network as your <code>traefik</code> container.</p>
+<h2 id="cloudflare-1">Cloudflare</h2>
+<p>Cloudflare handles DNS and certificates for us. You will need to sign up for a free account, and enable Cloudflare for your website.</p>
+<p>Setup your DNS records, and set the SSL/TLS encryption mode to &quot;Full&quot;, and that's it! You can check out all the other features, especially Security and tweak to your liking.</p>
+<blockquote>
+<p>If you don't want to use Cloudflare, you can of course use any DNS regstrar you like, but certificates management can get a little complicated depending on API access possibility. Traefik can handle ACME automatic certificate renewal, but some features (like DNS challenge) require API access to the DNS provider, and that is not always a possibility. You can check out the compatibility list <a href="https://go-acme.github.io/lego/dns/">here</a>.</p>
+</blockquote>
+<h1 id="conclusion">Conclusion</h1>
+<p>Hopefully this was helpful to you! Thank you for reading, I hope you have fun building stuff :).</p>
+
+  </div>
+  
+
+  <footer class="post-footer">
+      
+      <ul class="post-tags">
+          
+          
+          <li><a href="https:&#x2F;&#x2F;v3lmx.github.io&#x2F;blog&#x2F;tags&#x2F;traefik&#x2F;">traefik</a></li>
+          
+          
+          <li><a href="https:&#x2F;&#x2F;v3lmx.github.io&#x2F;blog&#x2F;tags&#x2F;infra&#x2F;">infra</a></li>
+          
+      </ul>
+      
+
+    
+    
+
+
+<nav class="paginav">
+    
+    
+</nav>
+
+
+    
+    
+  </footer>
+
+</article>
+
+    </main>
+    
+    <footer class="footer">
+    
+    <span>&copy; 2023 <a href="https:&#x2F;&#x2F;v3lmx.github.io&#x2F;blog&#x2F;">v3lmx</a></span>
+    
+    <span>
+        Powered by
+        <a href="https://www.getzola.org/" rel="noopener noreferrer" target="_blank">Zola</a> &
+        <a href="https://github.com/cydave/zola-theme-papermod" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+
+
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+
+
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+
+
+
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+
+
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerText = 'copy';
+        function copyingDone() {
+            copybutton.innerText = 'copied!';
+            setTimeout(() => {
+                copybutton.innerText = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            // td containing LineNos
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            // table containing LineNos and code
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            // code blocks not having highlight as parent class
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+
+
+    
+</body>
+</html>
